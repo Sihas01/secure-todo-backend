@@ -6,10 +6,12 @@ const User = require('./models/user.model.js');
 const bcrypt = require('bcrypt');
 const cors = require('cors');
 const generateToken = require('./util/utils.js');
+const ToDoItem = require('./models/todoItem.model.js');
+const verifyToken = require('./middleware/auth.js');
 
 app.use(express.json());
 app.use(cors({
-  origin: 'http://localhost:5173',
+    origin: 'http://localhost:5173',
 }));
 const port = 3000;
 
@@ -62,6 +64,27 @@ app.post('/api/register', async (req, res) => {
         res.status(500).json({ success: false, message: "server error" });
     }
 })
+
+app.get('/api/todos',verifyToken, async (req, res) => {
+    try {
+        const todos = await ToDoItem.find({userId: req.user.id});
+        res.status(200).json({ success: true, data: todos })
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+})
+
+app.post('/api/todos',verifyToken,async (req,res) => {
+    const {title, description} = req.body;
+    try{
+        const newToDoItem = await ToDoItem.create({title,description, userId : req.user.id});
+        res.status(201).json({sucess:true,data:newToDoItem})
+    }catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+} )
 
 
 
