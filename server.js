@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 const User = require('./models/user.model.js');
 const bcrypt = require('bcrypt');
 const cors = require('cors');
+const generateToken = require('./util/utils.js');
 
 app.use(express.json());
 app.use(cors({
@@ -29,8 +30,9 @@ app.post('/api/login', async (req, res) => {
             return res.status(401).json({ success: false, message: "Invalid credentials" })
         }
 
+        const tokenForUser = generateToken(isUser._id)
         const { password, ...userWithoutPassword } = isUser.toObject();
-        return res.status(200).json({ success: true, data: userWithoutPassword });
+        return res.status(200).json({ success: true, data: userWithoutPassword, token: tokenForUser });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ success: false, message: "server error" })
@@ -60,6 +62,7 @@ app.post('/api/register', async (req, res) => {
         res.status(500).json({ success: false, message: "server error" });
     }
 })
+
 
 
 const mongoURI = process.env.MONGO_URI;
