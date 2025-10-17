@@ -1,13 +1,9 @@
 const express = require('express')
-const app = express()
 require('dotenv').config();
 const mongoose = require('mongoose');
-const User = require('./models/user.model.js');
-const bcrypt = require('bcrypt');
 const cors = require('cors');
-const generateToken = require('./util/utils.js');
-const ToDoItem = require('./models/todoItem.model.js');
-const verifyToken = require('./middleware/auth.js');
+
+const app = express()
 
 app.use(express.json());
 app.use(cors({
@@ -15,78 +11,12 @@ app.use(cors({
 }));
 const port = 3000;
 
-app.post('/api/login', async (req, res) => {
-    const user = req.body;
-    if (!user.email || !user.password) {
-        return res.status(400).json({ success: false, message: "Provide required fields" })
-    }
-
-    try {
-        const isUser = await User.findOne({ email: user.email }).select('+password');
-        if (!isUser) {
-            return res.status(401).json({ success: false, message: "Invalid credentials" })
-        }
-
-        const isMatch = await bcrypt.compare(user.password, isUser.password);
-        if (!isMatch) {
-            return res.status(401).json({ success: false, message: "Invalid credentials" })
-        }
-
-        const tokenForUser = generateToken(isUser._id)
-        const { password, ...userWithoutPassword } = isUser.toObject();
-        return res.status(200).json({ success: true, data: userWithoutPassword, token: tokenForUser });
-    } catch (error) {
-        console.log(error);
-        return res.status(500).json({ success: false, message: "server error" })
-    }
-})
-
-app.post('/api/register', async (req, res) => {
-    const user = req.body;
-    if (!user.email || !user.password) {
-        return res.status(400).json({ sucess: false, message: "provide all fields" })
-    }
-
-    try {
-        const userExist = await User.findOne({ email: user.email })
-        if (userExist) {
-            return res.status(409).json({ success: false, message: "User already exist" })
-        }
-
-        const hashPassword = await bcrypt.hash(user.password, 10);
-        user.password = hashPassword;
-
-        const newUser = await User.create(user);
-        const { password, ...userWithoutPassword } = newUser.toObject();
-        res.status(200).json({ success: true, data: userWithoutPassword });
-    } catch (error) {
-        console.log("error message: ", error.message)
-        res.status(500).json({ success: false, message: "server error" });
-    }
-})
-
-app.get('/api/todos',verifyToken, async (req, res) => {
-    try {
-        const todos = await ToDoItem.find({userId: req.user.id});
-        res.status(200).json({ success: true, data: todos })
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ success: false, message: 'Server error' });
-    }
-})
-
-app.post('/api/todos',verifyToken,async (req,res) => {
-    const {title, description} = req.body;
-    try{
-        const newToDoItem = await ToDoItem.create({title,description, userId : req.user.id});
-        res.status(201).json({sucess:true,data:newToDoItem})
-    }catch (error) {
-        console.error(error);
-        res.status(500).json({ success: false, message: 'Server error' });
-    }
-} )
+const authRoutes = require('./routes/authRoutes.js');
+const todoRoutes = require('./routes/todoRoutes.js');
 
 
+app.use('/api',authRoutes);
+app.use('/api/todos',todoRoutes);
 
 const mongoURI = process.env.MONGO_URI;
 mongoose.connect(mongoURI).then(() => {
